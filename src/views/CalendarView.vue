@@ -1,18 +1,58 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+
+// --- Data Structures ---
+interface CalendarEvent {
+  id: string // Unique ID for the event
+  hour: number // 0-11, corresponds to the slice index (0 = 12 o'clock position)
+  name: string // Description of the event
+  color: string // Color for the dot
+}
+
+interface EventDot {
+  id: string
+  cx: number
+  cy: number
+  fill: string
+  radius: number
+}
+
+interface SliceData {
+  id: string
+  d: string // SVG path data for the slice
+  eventDots: EventDot[]
+}
+
+// --- Sample Event Data ---
+// (hour: 0 is the first slice, typically 12 o'clock)
+const events = ref<CalendarEvent[]>([
+  { id: 'evt1', hour: 0, name: 'Morning Standup', color: 'tomato' },
+  { id: 'evt2', hour: 0, name: 'Client Call', color: 'gold' },
+  { id: 'evt3', hour: 2, name: 'Lunch with Team', color: 'limegreen' }, // 2 o'clock slice
+  { id: 'evt4', hour: 3, name: 'Project X Work', color: 'deepskyblue' },
+  { id: 'evt5', hour: 3, name: 'Review PRs', color: 'mediumpurple' },
+  { id: 'evt6', hour: 3, name: 'Quick Sync', color: 'lightcoral' }, // Max 3 dots per slice with current settings
+  { id: 'evt7', hour: 8, name: 'Evening Coding', color: 'darkorange' },
+])
 
 const numberOfSlices = 12
 const viewBoxSize = 200 // Defines the coordinate system for the SVG
 const centerX = viewBoxSize / 2
 const centerY = viewBoxSize / 2
 const radius = (viewBoxSize / 2) * 0.95 // 95% of half the viewBox, leaving a small margin
+const dotVisualRadius = viewBoxSize * 0.018 // Radius of the event dots (e.g., 1.8% of viewBoxSize)
+const dotPlacement = {
+  startRadiusFactor: 0.45, // Start placing dots at 45% of the main radius from the center
+  radiusIncrementFactor: 0.15, // Increment distance from center by 15% of main radius for each subsequent dot
+  maxDotsPerSlice: 3, // Limit dots shown to prevent clutter, can be adjusted
+}
 
 // Helper function to convert degrees to radians
 const toRadians = (degrees: number): number => degrees * (Math.PI / 180)
 
 // Computed property to generate SVG path data for each slice
-const slices = computed(() => {
-  const resultSlices = []
+const slicesWithEvents = computed<SliceData[]>(() => {
+  const resultSlices: SliceData[] = []
   const anglePerSliceDegrees = 360 / numberOfSlices
   // Offset to start the first slice at the 12 o'clock position
   const angleOffsetDegrees = -90
@@ -48,9 +88,38 @@ const slices = computed(() => {
       'Z',
     ].join(' ')
 
+    // --- Event Dot Calculation for this slice ---
+    const sliceEvents = events.value.filter((event) => event.hour === i)
+    const eventDots: EventDot[] = []
+
+    // Calculate the middle angle of the current slice for dot placement
+    const midAngleDegrees = startAngleDegrees + anglePerSliceDegrees / 2
+    const midAngleRad = toRadians(midAngleDegrees)
+
+    sliceEvents.slice(0, dotPlacement.maxDotsPerSlice).forEach((event, eventIndex) => {
+      // Place dots radially outwards from the center along the mid-angle of the slice
+      const distanceFromCenter =
+        radius * (dotPlacement.startRadiusFactor + eventIndex * dotPlacement.radiusIncrementFactor)
+
+      // Ensure dots don't go beyond the main radius (with a small margin)
+      if (distanceFromCenter < radius * 0.88) {
+        // Cap at 88% of radius to stay well within
+        const dotCx = centerX + distanceFromCenter * Math.cos(midAngleRad)
+        const dotCy = centerY + distanceFromCenter * Math.sin(midAngleRad)
+        eventDots.push({
+          id: event.id,
+          cx: dotCx,
+          cy: dotCy,
+          fill: event.color,
+          radius: dotVisualRadius,
+        })
+      }
+    })
+
     resultSlices.push({
       id: `slice-${i}`,
       d: d,
+      eventDots: eventDots,
     })
   }
   return resultSlices
@@ -60,8 +129,18 @@ const slices = computed(() => {
 <template>
   <div class="calendar-view">
     <svg :viewBox="`0 0 ${viewBoxSize} ${viewBoxSize}`" class="pie-chart-svg">
-      <g class="slices-group">
-        <path v-for="slice in slices" :key="slice.id" :d="slice.d" class="slice" />
+      <!-- Group for each slice and its dots -->
+      <g v-for="sliceData in slicesWithEvents" :key="sliceData.id" class="slice-group">
+        <path :d="sliceData.d" class="slice" />
+        <circle
+          v-for="dot in sliceData.eventDots"
+          :key="dot.id"
+          :cx="dot.cx"
+          :cy="dot.cy"
+          :r="dot.radius"
+          :fill="dot.fill"
+          class="event-dot"
+        />
       </g>
     </svg>
   </div>
@@ -95,5 +174,10 @@ const slices = computed(() => {
 
 .slice:hover {
   fill: steelblue; /* Color when a slice is hovered over */
+}
+
+.event-dot {
+  stroke: rgba(255, 255, 255, 0.7); /* Optional: slight white border for better visibility */
+  stroke-width: 0.3; /* Relative to viewBoxSize */
 }
 </style>
