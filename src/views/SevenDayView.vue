@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import EventListModal from '../components/EventListModal.vue'
 
 // --- Data Structures ---
 interface CalendarEvent {
@@ -21,6 +22,7 @@ interface SliceData {
   id: string
   d: string // SVG path data for the slice
   eventDots: EventDot[]
+  originalEvents: CalendarEvent[] // To pass to the modal
 }
 
 // --- Sample Event Data ---
@@ -45,6 +47,11 @@ const dotPlacement = {
   radiusIncrementFactor: 0.15,
   maxDotsPerSlice: 3,
 }
+
+// --- Modal State ---
+const isModalVisible = ref(false)
+const selectedSliceEvents = ref<CalendarEvent[]>([])
+const selectedSliceIdentifier = ref<string>('')
 
 // Helper function to convert degrees to radians
 const toRadians = (degrees: number): number => degrees * (Math.PI / 180)
@@ -104,16 +111,31 @@ const slicesWithEvents = computed<SliceData[]>(() => {
       id: `slice-${i}`,
       d: d,
       eventDots: eventDots,
+      originalEvents: sliceEvents, // Store the original events for this slice
     })
   }
   return resultSlices
 })
+
+const handleSliceClick = (slice: SliceData, sliceIndex: number) => {
+  selectedSliceEvents.value = slice.originalEvents
+  selectedSliceIdentifier.value = `Week ${sliceIndex + 1}` // Example identifier
+  isModalVisible.value = true
+}
+const closeModal = () => {
+  isModalVisible.value = false
+}
 </script>
 
 <template>
   <div class="seven-day-view">
     <svg :viewBox="`0 0 ${viewBoxSize} ${viewBoxSize}`" class="pie-chart-svg">
-      <g v-for="sliceData in slicesWithEvents" :key="sliceData.id" class="slice-group">
+      <g
+        v-for="sliceData in slicesWithEvents"
+        :key="sliceData.id"
+        class="slice-group"
+        @click="handleSliceClick(sliceData, index)"
+      >
         <path :d="sliceData.d" class="slice" />
         <circle
           v-for="dot in sliceData.eventDots"
@@ -126,6 +148,12 @@ const slicesWithEvents = computed<SliceData[]>(() => {
         />
       </g>
     </svg>
+    <EventListModal
+      :is-visible="isModalVisible"
+      :events="selectedSliceEvents"
+      :slice-identifier="selectedSliceIdentifier"
+      @close="closeModal"
+    />
   </div>
 </template>
 
@@ -154,6 +182,7 @@ const slicesWithEvents = computed<SliceData[]>(() => {
   stroke: white;
   stroke-width: 1;
   transition: fill 0.2s ease-in-out;
+  cursor: pointer; /* Add cursor pointer to indicate clickable slices */
 }
 
 .slice:hover {
@@ -163,5 +192,10 @@ const slicesWithEvents = computed<SliceData[]>(() => {
 .event-dot {
   stroke: rgba(255, 255, 255, 0.7);
   stroke-width: 0.3;
+  pointer-events: none; /* Ensure dots don't interfere with slice click */
+}
+
+.slice-group {
+  /* Clicks will be handled by this group */
 }
 </style>
