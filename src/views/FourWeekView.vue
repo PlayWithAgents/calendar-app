@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import EventListModal from '../components/EventListModal.vue'
 
 // --- Data Structures ---
@@ -48,6 +48,7 @@ const dotPlacement = {
 }
 
 // --- Modal State ---
+const currentPeriodIndex = ref(0) // State to track the current 4-week period
 const isModalVisible = ref(false)
 const selectedSliceEvents = ref<CalendarEvent[]>([])
 const selectedSliceIdentifier = ref<string>('')
@@ -116,11 +117,45 @@ const slicesWithEvents = computed<SliceData[]>(() => {
   return resultSlices
 })
 
+// --- Navigation Logic ---
+const moveForward = () => {
+  // In a real app, this would advance the date/time by 4 weeks
+  currentPeriodIndex.value++
+}
+
+const moveBackward = () => {
+  // In a real app, this would move the date/time back by 4 weeks
+  if (currentPeriodIndex.value > 0) {
+    currentPeriodIndex.value--
+  }
+}
+
+// --- Keyboard Navigation ---
+const handleViewKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'ArrowRight') {
+    moveForward()
+    event.preventDefault() // Prevent default browser scroll/behavior
+  } else if (event.key === 'ArrowLeft') {
+    moveBackward()
+    event.preventDefault() // Prevent default browser scroll/behavior
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleViewKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleViewKeydown)
+})
+
+// --- Modal Handling ---
 const handleSliceClick = (slice: SliceData, sliceIndex: number) => {
   selectedSliceEvents.value = slice.originalEvents
   selectedSliceIdentifier.value = `Week ${sliceIndex + 1}` // Example identifier
   isModalVisible.value = true
 }
+
 const closeModal = () => {
   isModalVisible.value = false
 }
@@ -128,6 +163,16 @@ const closeModal = () => {
 
 <template>
   <div class="four-week-view">
+    <!-- Updated class name -->
+    <header class="view-header">
+      <h2>4-Week View</h2>
+      <p>Period: {{ currentPeriodIndex + 1 }}</p>
+      <!-- In a real app, this would show actual date range -->
+    </header>
+
+    <!-- Add event listeners to the main div to capture key presses -->
+    <!-- @keydown="handleViewKeydown" -->
+
     <svg :viewBox="`0 0 ${viewBoxSize} ${viewBoxSize}`" class="pie-chart-svg">
       <g
         v-for="sliceData in slicesWithEvents"
@@ -157,6 +202,12 @@ const closeModal = () => {
 </template>
 
 <style scoped>
+.view-header {
+  position: absolute;
+  top: 20px;
+  text-align: center;
+  color: black;
+}
 .four-week-view {
   /* Updated class name */
   width: 100vw;
@@ -167,6 +218,7 @@ const closeModal = () => {
   background-color: #f0f0f0;
   margin: 0;
   padding: 0;
+  overflow: hidden; /* Hide potential scrollbars */
   box-sizing: border-box;
 }
 

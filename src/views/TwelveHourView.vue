@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import EventListModal from '../components/EventListModal.vue'
 
 // --- Data Structures ---
@@ -50,6 +50,7 @@ const dotPlacement = {
 }
 
 // --- Modal State ---
+const currentPeriodIndex = ref(0) // State to track the current 12-hour period
 const isModalVisible = ref(false)
 const selectedSliceEvents = ref<CalendarEvent[]>([])
 const selectedSliceIdentifier = ref<string>('')
@@ -133,9 +134,44 @@ const slicesWithEvents = computed<SliceData[]>(() => {
   return resultSlices
 })
 
+// --- Navigation Logic ---
+const moveForward = () => {
+  // In a real app, this would advance the date/time by 12 hours
+  currentPeriodIndex.value++
+}
+
+const moveBackward = () => {
+  // In a real app, this would move the date/time back by 12 hours
+  if (currentPeriodIndex.value > 0) {
+    currentPeriodIndex.value--
+  }
+}
+
+// --- Keyboard Navigation ---
+const handleViewKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'ArrowRight') {
+    moveForward()
+    event.preventDefault() // Prevent default browser scroll/behavior
+  } else if (event.key === 'ArrowLeft') {
+    moveBackward()
+    event.preventDefault() // Prevent default browser scroll/behavior
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleViewKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleViewKeydown)
+})
+
+// --- Modal Handling ---
 const handleSliceClick = (slice: SliceData, sliceIndex: number) => {
   selectedSliceEvents.value = slice.originalEvents
-  selectedSliceIdentifier.value = `Week ${sliceIndex + 1}` // Example identifier
+  // Correct identifier for 12-hour view
+  const displayHour = sliceIndex === 0 ? 12 : sliceIndex
+  selectedSliceIdentifier.value = `Hour ${displayHour}`
   isModalVisible.value = true
 }
 const closeModal = () => {
@@ -144,7 +180,16 @@ const closeModal = () => {
 </script>
 
 <template>
-  <div class="calendar-view">
+  <div class="twelve-hour-view">
+    <header class="view-header">
+      <h2>12-Hour View</h2>
+      <p>Period: {{ currentPeriodIndex + 1 }}</p>
+      <!-- In a real app, this would show actual date/time range -->
+    </header>
+
+    <!-- Add event listeners to the main div to capture key presses -->
+    <!-- @keydown="handleViewKeydown" -->
+
     <svg :viewBox="`0 0 ${viewBoxSize} ${viewBoxSize}`" class="pie-chart-svg">
       <!-- Group for each slice and its dots -->
       <g
@@ -175,7 +220,14 @@ const closeModal = () => {
 </template>
 
 <style scoped>
-.calendar-view {
+.view-header {
+  position: absolute;
+  top: 20px;
+  text-align: center;
+  color: black;
+}
+.twelve-hour-view {
+  /* Updated class name */
   width: 100vw; /* Full viewport width */
   height: 100vh; /* Full viewport height */
   display: flex;
@@ -185,6 +237,7 @@ const closeModal = () => {
   margin: 0; /* Remove any default body margin effects */
   padding: 0; /* Ensure no padding interferes with full screen */
   box-sizing: border-box;
+  overflow: hidden; /* Hide potential scrollbars */
 }
 
 .pie-chart-svg {
