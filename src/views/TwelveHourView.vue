@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import EventListModal from '../components/EventListModal.vue'
+import { useSlicesWithEvents } from '@/composables/useSlicesWithEvents'
 import type { CalendarEvent } from '../types/CalendarEvent'
-import type { EventDot } from '../types/EventDot'
 import type { SliceData } from '../types/SliceData'
 
 // --- Sample Event Data ---
@@ -19,10 +19,6 @@ const events = ref<CalendarEvent[]>([
 
 const numberOfSlices = 12
 const viewBoxSize = 200 // Defines the coordinate system for the SVG
-const centerX = viewBoxSize / 2
-const centerY = viewBoxSize / 2
-const radius = (viewBoxSize / 2) * 0.95 // 95% of half the viewBox, leaving a small margin
-const dotVisualRadius = viewBoxSize * 0.018 // Radius of the event dots (e.g., 1.8% of viewBoxSize)
 const dotPlacement = {
   startRadiusFactor: 0.45, // Start placing dots at 45% of the main radius from the center
   radiusIncrementFactor: 0.15, // Increment distance from center by 15% of main radius for each subsequent dot
@@ -35,84 +31,8 @@ const isModalVisible = ref(false)
 const selectedSliceEvents = ref<CalendarEvent[]>([])
 const selectedSliceIdentifier = ref<string>('')
 
-// Helper function to convert degrees to radians
-const toRadians = (degrees: number): number => degrees * (Math.PI / 180)
-
-// Computed property to generate SVG path data for each slice
-const slicesWithEvents = computed<SliceData[]>(() => {
-  const resultSlices: SliceData[] = []
-  const anglePerSliceDegrees = 360 / numberOfSlices
-  // Offset to start the first slice at the 12 o'clock position
-  const angleOffsetDegrees = -90
-
-  for (let i = 0; i < numberOfSlices; i++) {
-    const startAngleDegrees = i * anglePerSliceDegrees + angleOffsetDegrees
-    const endAngleDegrees = (i + 1) * anglePerSliceDegrees + angleOffsetDegrees
-
-    const startAngleRad = toRadians(startAngleDegrees)
-    const endAngleRad = toRadians(endAngleDegrees)
-
-    // Calculate the start point of the arc (x1, y1)
-    const x1 = centerX + radius * Math.cos(startAngleRad)
-    const y1 = centerY + radius * Math.sin(startAngleRad)
-
-    // Calculate the end point of the arc (x2, y2)
-    const x2 = centerX + radius * Math.cos(endAngleRad)
-    const y2 = centerY + radius * Math.sin(endAngleRad)
-
-    // SVG arc flags
-    const largeArcFlag = anglePerSliceDegrees <= 180 ? 0 : 1 // For 30-degree slices, this is 0
-    const sweepFlag = 1 // Draw arc in a "positive-angle" direction (clockwise)
-
-    // Construct the SVG path data string for a pie slice
-    // M = Move to center
-    // L = Line to arc start point (x1, y1)
-    // A = Arc command (rx, ry, x-axis-rotation, large-arc-flag, sweep-flag, x, y)
-    // Z = Close path (line back to the starting point, i.e., the center)
-    const d = [
-      `M ${centerX} ${centerY}`,
-      `L ${x1} ${y1}`,
-      `A ${radius} ${radius} 0 ${largeArcFlag} ${sweepFlag} ${x2} ${y2}`,
-      'Z',
-    ].join(' ')
-
-    // --- Event Dot Calculation for this slice ---
-    const sliceEvents = events.value.filter((event) => event.sliceIndex === i)
-    const eventDots: EventDot[] = []
-
-    // Calculate the middle angle of the current slice for dot placement
-    const midAngleDegrees = startAngleDegrees + anglePerSliceDegrees / 2
-    const midAngleRad = toRadians(midAngleDegrees)
-
-    sliceEvents.slice(0, dotPlacement.maxDotsPerSlice).forEach((event, eventIndex) => {
-      // Place dots radially outwards from the center along the mid-angle of the slice
-      const distanceFromCenter =
-        radius * (dotPlacement.startRadiusFactor + eventIndex * dotPlacement.radiusIncrementFactor)
-
-      // Ensure dots don't go beyond the main radius (with a small margin)
-      if (distanceFromCenter < radius * 0.88) {
-        // Cap at 88% of radius to stay well within
-        const dotCx = centerX + distanceFromCenter * Math.cos(midAngleRad)
-        const dotCy = centerY + distanceFromCenter * Math.sin(midAngleRad)
-        eventDots.push({
-          id: event.id,
-          cx: dotCx,
-          cy: dotCy,
-          fill: event.color,
-          radius: dotVisualRadius,
-        })
-      }
-    })
-
-    resultSlices.push({
-      id: `slice-${i}`,
-      d: d,
-      eventDots: eventDots,
-      originalEvents: sliceEvents, // Store the original events for this slice
-    })
-  }
-  return resultSlices
-})
+const { slicesWithEvents } =
+  useSlicesWithEvents(events, numberOfSlices, viewBoxSize, dotPlacement)
 
 // --- Navigation Logic ---
 const moveForward = () => {
