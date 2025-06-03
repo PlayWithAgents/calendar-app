@@ -14,12 +14,22 @@ dist-ssr
 coverage
 *.local
 
+# Local development environment files
+.env
+.env.*.local
+.env.*
+
+# Vite cache directory
+.vite
+
+# Other cache directories
+.cache
+
 /cypress/videos/
 /cypress/screenshots/
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+.vscode/
 .idea
 *.suo
 *.ntvs*
