@@ -1,40 +1,20 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import EventListModal from '../components/EventListModal.vue'
-
-// --- Data Structures ---
-interface CalendarEvent {
-  id: string // Unique ID for the event
-  hour: number // 0-11, corresponds to the slice index (0 = 12 o'clock position)
-  name: string // Description of the event
-  color: string // Color for the dot
-}
-
-interface EventDot {
-  id: string
-  cx: number
-  cy: number
-  fill: string
-  radius: number
-}
-
-interface SliceData {
-  id: string
-  d: string // SVG path data for the slice
-  eventDots: EventDot[]
-  originalEvents: CalendarEvent[] // To pass to the modal
-}
+import type { CalendarEvent } from '../types/CalendarEvent'
+import type { EventDot } from '../types/EventDot'
+import type { SliceData } from '../types/SliceData'
 
 // --- Sample Event Data ---
-// (hour: 0 is the first slice, typically 12 o'clock)
+// (sliceIndex: 0 is the first slice, typically 12 o'clock)
 const events = ref<CalendarEvent[]>([
-  { id: 'evt1', hour: 0, name: 'Morning Standup', color: 'tomato' },
-  { id: 'evt2', hour: 0, name: 'Client Call', color: 'gold' },
-  { id: 'evt3', hour: 2, name: 'Lunch with Team', color: 'limegreen' }, // 2 o'clock slice
-  { id: 'evt4', hour: 3, name: 'Project X Work', color: 'deepskyblue' },
-  { id: 'evt5', hour: 3, name: 'Review PRs', color: 'mediumpurple' },
-  { id: 'evt6', hour: 3, name: 'Quick Sync', color: 'lightcoral' }, // Max 3 dots per slice with current settings
-  { id: 'evt7', hour: 8, name: 'Evening Coding', color: 'darkorange' },
+  { id: 'evt1', sliceIndex: 0, name: 'Morning Standup', color: 'tomato' },
+  { id: 'evt2', sliceIndex: 0, name: 'Client Call', color: 'gold' },
+  { id: 'evt3', sliceIndex: 2, name: 'Lunch with Team', color: 'limegreen' }, // 2 o'clock slice
+  { id: 'evt4', sliceIndex: 3, name: 'Project X Work', color: 'deepskyblue' },
+  { id: 'evt5', sliceIndex: 3, name: 'Review PRs', color: 'mediumpurple' },
+  { id: 'evt6', sliceIndex: 3, name: 'Quick Sync', color: 'lightcoral' }, // Max 3 dots per slice with current settings
+  { id: 'evt7', sliceIndex: 8, name: 'Evening Coding', color: 'darkorange' },
 ])
 
 const numberOfSlices = 12
@@ -97,7 +77,7 @@ const slicesWithEvents = computed<SliceData[]>(() => {
     ].join(' ')
 
     // --- Event Dot Calculation for this slice ---
-    const sliceEvents = events.value.filter((event) => event.hour === i)
+    const sliceEvents = events.value.filter((event) => event.sliceIndex === i)
     const eventDots: EventDot[] = []
 
     // Calculate the middle angle of the current slice for dot placement

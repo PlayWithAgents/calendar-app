@@ -1,29 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import EventListModal from '../components/EventListModal.vue'
+import type { CalendarEvent } from '../types/CalendarEvent'
+import type { EventDot } from '../types/EventDot'
+import type { SliceData } from '../types/SliceData'
 
-// --- Data Structures ---
-interface CalendarEvent {
-  id: string // Unique ID for the event
-  sliceIndex: number // 0-3, corresponds to the slice index (0 = first slice)
-  name: string // Description of the event
-  color: string // Color for the dot
-}
-
-interface EventDot {
-  id: string
-  cx: number
-  cy: number
-  fill: string
-  radius: number
-}
-
-interface SliceData {
-  id: string
-  d: string // SVG path data for the slice
-  eventDots: EventDot[]
-  originalEvents: CalendarEvent[] // To pass to the modal
-}
 
 // --- Sample Event Data ---
 // (sliceIndex: 0 is the first slice)
