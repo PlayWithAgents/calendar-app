@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import EventListModal from '../components/EventListModal.vue'
+import { useSlicesWithEvents } from '@/composables/useSlicesWithEvents'
 import type { CalendarEvent } from '../types/CalendarEvent'
-import type { EventDot } from '../types/EventDot'
 import type { SliceData } from '../types/SliceData'
 
 
@@ -19,10 +19,6 @@ const events = ref<CalendarEvent[]>([
 
 const numberOfSlices = 7 // Key change for this view
 const viewBoxSize = 200 // Defines the coordinate system for the SVG
-const centerX = viewBoxSize / 2
-const centerY = viewBoxSize / 2
-const radius = (viewBoxSize / 2) * 0.95 // 95% of half the viewBox, leaving a small margin
-const dotVisualRadius = viewBoxSize * 0.018 // Radius of the event dots
 const dotPlacement = {
   startRadiusFactor: 0.45,
   radiusIncrementFactor: 0.15,
@@ -35,69 +31,8 @@ const isModalVisible = ref(false)
 const selectedSliceEvents = ref<CalendarEvent[]>([])
 const selectedSliceIdentifier = ref<string>('')
 
-// Helper function to convert degrees to radians
-const toRadians = (degrees: number): number => degrees * (Math.PI / 180)
-
-// Computed property to generate SVG path data for each slice
-const slicesWithEvents = computed<SliceData[]>(() => {
-  const resultSlices: SliceData[] = []
-  const anglePerSliceDegrees = 360 / numberOfSlices
-  const angleOffsetDegrees = -90 // Start at 12 o'clock
-
-  for (let i = 0; i < numberOfSlices; i++) {
-    const startAngleDegrees = i * anglePerSliceDegrees + angleOffsetDegrees
-    const endAngleDegrees = (i + 1) * anglePerSliceDegrees + angleOffsetDegrees
-
-    const startAngleRad = toRadians(startAngleDegrees)
-    const endAngleRad = toRadians(endAngleDegrees)
-
-    const x1 = centerX + radius * Math.cos(startAngleRad)
-    const y1 = centerY + radius * Math.sin(startAngleRad)
-    const x2 = centerX + radius * Math.cos(endAngleRad)
-    const y2 = centerY + radius * Math.sin(endAngleRad)
-
-    const largeArcFlag = anglePerSliceDegrees <= 180 ? 0 : 1
-    const sweepFlag = 1
-
-    const d = [
-      `M ${centerX} ${centerY}`,
-      `L ${x1} ${y1}`,
-      `A ${radius} ${radius} 0 ${largeArcFlag} ${sweepFlag} ${x2} ${y2}`,
-      'Z',
-    ].join(' ')
-
-    const sliceEvents = events.value.filter((event) => event.sliceIndex === i)
-    const eventDots: EventDot[] = []
-
-    const midAngleDegrees = startAngleDegrees + anglePerSliceDegrees / 2
-    const midAngleRad = toRadians(midAngleDegrees)
-
-    sliceEvents.slice(0, dotPlacement.maxDotsPerSlice).forEach((event, eventIndex) => {
-      const distanceFromCenter =
-        radius * (dotPlacement.startRadiusFactor + eventIndex * dotPlacement.radiusIncrementFactor)
-
-      if (distanceFromCenter < radius * 0.88) {
-        const dotCx = centerX + distanceFromCenter * Math.cos(midAngleRad)
-        const dotCy = centerY + distanceFromCenter * Math.sin(midAngleRad)
-        eventDots.push({
-          id: event.id,
-          cx: dotCx,
-          cy: dotCy,
-          fill: event.color,
-          radius: dotVisualRadius,
-        })
-      }
-    })
-
-    resultSlices.push({
-      id: `slice-${i}`,
-      d: d,
-      eventDots: eventDots,
-      originalEvents: sliceEvents, // Store the original events for this slice
-    })
-  }
-  return resultSlices
-})
+const { slicesWithEvents } =
+  useSlicesWithEvents(events, numberOfSlices, viewBoxSize, dotPlacement)
 
 // --- Navigation Logic ---
 const moveForward = () => {
