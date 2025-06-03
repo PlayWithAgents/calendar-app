@@ -116,8 +116,14 @@ const currentDateTime = ref(new Date()) // Represents the current date and time 
 const isModalVisible = ref(false)
 const selectedSliceEvents = ref<CalendarEvent[]>([])
 const selectedSliceIdentifier = ref<string>('')
+const highlightedSliceIndex = ref(0) // State to track the index of the highlighted slice
 
 const { slicesWithEvents } = useSlicesWithEvents(events, numberOfSlices, viewBoxSize, dotPlacement)
+
+// Calculate the initial highlighted slice index on mount
+onMounted(() => {
+  highlightedSliceIndex.value = currentDateTime.value.getHours() % 12
+})
 
 // --- Navigation Logic ---
 const moveForward = () => {
@@ -128,6 +134,14 @@ const moveForward = () => {
 const moveBackward = () => {
   // Move the current time back by one hour
   currentDateTime.value = new Date(currentDateTime.value.getTime() - 60 * 60 * 1000)
+}
+
+// --- Highlight Navigation Logic (Separate from time navigation) ---
+const moveHighlightForward = () => {
+  if (highlightedSliceIndex.value < numberOfSlices - 1) highlightedSliceIndex.value++
+}
+const moveHighlightBackward = () => {
+  if (highlightedSliceIndex.value > 0) highlightedSliceIndex.value--
 }
 
 // --- Computed properties for display ---
@@ -151,10 +165,12 @@ const currentDateForDisplay = computed(() =>
 // --- Keyboard Navigation ---
 const handleViewKeydown = (event: KeyboardEvent) => {
   if (event.key === 'ArrowRight') {
-    moveForward()
+    moveForward() // Always move time forward
+    moveHighlightForward()
     event.preventDefault() // Prevent default browser scroll/behavior
   } else if (event.key === 'ArrowLeft') {
-    moveBackward()
+    moveBackward() // Always move time backward
+    moveHighlightBackward()
     event.preventDefault() // Prevent default browser scroll/behavior
   }
 }
@@ -199,7 +215,10 @@ const closeModal = () => {
         class="slice-group"
         @click="handleSliceClick(sliceData, index)"
       >
-        <path :d="sliceData.d" class="slice" />
+        <path
+          :d="sliceData.d"
+          :class="['slice', { 'is-highlighted': index === highlightedSliceIndex }]"
+        />
         <circle
           v-for="dot in sliceData.eventDots"
           :key="dot.id"
@@ -248,7 +267,7 @@ const closeModal = () => {
 }
 
 .slice {
-  fill: lightskyblue; /* Default color for slices */
+  fill: lightskyblue; /* Base color for slices */
   stroke: white; /* Color for the lines between slices */
   stroke-width: 1; /* Width of the lines, relative to viewBoxSize */
   transition: fill 0.2s ease-in-out; /* Smooth transition for hover effect */
@@ -257,6 +276,10 @@ const closeModal = () => {
 
 .slice:hover {
   fill: steelblue; /* Color when a slice is hovered over */
+}
+
+.slice.is-highlighted {
+  fill: steelblue; /* Highlight color */
 }
 
 .event-dot {
