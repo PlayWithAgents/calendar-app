@@ -6,15 +6,101 @@ import type { CalendarEvent } from '../types/CalendarEvent'
 import type { SliceData } from '../types/SliceData'
 
 // --- Sample Event Data ---
+// Helper to create Date objects for today at a specific hour and minute
+const createEventDateTime = (hour: number, minute: number = 0): Date => {
+  const today = new Date()
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate(), hour, minute)
+}
 // (sliceIndex: 0 is the first slice, typically 12 o'clock)
+// sliceIndex should correspond to `dateTime.getHours() % 12`
 const events = ref<CalendarEvent[]>([
-  { id: 'evt1', sliceIndex: 0, name: 'Morning Standup', color: 'tomato' },
-  { id: 'evt2', sliceIndex: 0, name: 'Client Call', color: 'gold' },
-  { id: 'evt3', sliceIndex: 2, name: 'Lunch with Team', color: 'limegreen' }, // 2 o'clock slice
-  { id: 'evt4', sliceIndex: 3, name: 'Project X Work', color: 'deepskyblue' },
-  { id: 'evt5', sliceIndex: 3, name: 'Review PRs', color: 'mediumpurple' },
-  { id: 'evt6', sliceIndex: 3, name: 'Quick Sync', color: 'lightcoral' }, // Max 3 dots per slice with current settings
-  { id: 'evt7', sliceIndex: 8, name: 'Evening Coding', color: 'darkorange' },
+  {
+    id: 'evt1',
+    dateTime: createEventDateTime(9, 0),
+    sliceIndex: 9,
+    name: 'Morning Standup',
+    color: 'tomato',
+  }, // 9 AM
+  {
+    id: 'evt2',
+    dateTime: createEventDateTime(10, 30),
+    sliceIndex: 10,
+    name: 'Client Call',
+    color: 'gold',
+  }, // 10:30 AM
+  {
+    id: 'evt3',
+    dateTime: createEventDateTime(13, 0),
+    sliceIndex: 1,
+    name: 'Lunch with Team',
+    color: 'limegreen',
+  }, // 1 PM
+  {
+    id: 'evt4',
+    dateTime: createEventDateTime(14, 0),
+    sliceIndex: 2,
+    name: 'Project X Work',
+    color: 'deepskyblue',
+  }, // 2 PM
+  {
+    id: 'evt5',
+    dateTime: createEventDateTime(15, 0),
+    sliceIndex: 3,
+    name: 'Review PRs',
+    color: 'mediumpurple',
+  }, // 3 PM
+  {
+    id: 'evt6',
+    dateTime: createEventDateTime(16, 0),
+    sliceIndex: 4,
+    name: 'Quick Sync',
+    color: 'lightcoral',
+  }, // 4 PM (will be 4th event for slice 4 if maxDotsPerSlice is high enough)
+  {
+    id: 'evt7',
+    dateTime: createEventDateTime(20, 0),
+    sliceIndex: 8,
+    name: 'Evening Coding',
+    color: 'darkorange',
+  }, // 8 PM
+  // Example of an event that would be at 12 PM (noon)
+  {
+    id: 'evt8',
+    dateTime: createEventDateTime(12, 0),
+    sliceIndex: 0,
+    name: 'Noon Check-in',
+    color: 'teal',
+  }, // 12 PM
+  // Example of an event that would be at 12 AM (midnight)
+  {
+    id: 'evt9',
+    dateTime: createEventDateTime(0, 0),
+    sliceIndex: 0,
+    name: 'Midnight Task',
+    color: 'indigo',
+  }, // 12 AM
+  {
+    id: 'evt10',
+    dateTime: createEventDateTime(9, 15),
+    sliceIndex: 9,
+    name: 'Follow-up Standup',
+    color: 'salmon',
+  }, // 9:15 AM
+  {
+    id: 'evt11',
+    dateTime: createEventDateTime(9, 45),
+    sliceIndex: 9,
+    name: 'Prep for Client Call',
+    color: 'lightsalmon',
+  }, // 9:45 AM
+  // This one would exceed maxDotsPerSlice for sliceIndex 9 if maxDotsPerSlice is 3
+  {
+    id: 'evt12',
+    dateTime: createEventDateTime(9, 50),
+    sliceIndex: 9,
+    name: 'Quick Email',
+    color: 'peachpuff',
+  }, // 9:50 AM
 ])
 
 const numberOfSlices = 12

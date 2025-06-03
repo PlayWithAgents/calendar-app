@@ -3,4 +3,5 @@ export interface CalendarEvent {
   sliceIndex: number
   name: string
   color: string
+  dateTime: Date
 }
