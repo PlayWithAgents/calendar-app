@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import EventListModal from '../components/EventListModal.vue'
 import { useSlicesWithEvents } from '@/composables/useSlicesWithEvents'
 import type { CalendarEvent } from '../types/CalendarEvent'
@@ -26,26 +26,41 @@ const dotPlacement = {
 }
 
 // --- Modal State ---
-const currentPeriodIndex = ref(0) // State to track the current 12-hour period
+const currentDateTime = ref(new Date()) // Represents the current date and time focus of the view
 const isModalVisible = ref(false)
 const selectedSliceEvents = ref<CalendarEvent[]>([])
 const selectedSliceIdentifier = ref<string>('')
 
-const { slicesWithEvents } =
-  useSlicesWithEvents(events, numberOfSlices, viewBoxSize, dotPlacement)
+const { slicesWithEvents } = useSlicesWithEvents(events, numberOfSlices, viewBoxSize, dotPlacement)
 
 // --- Navigation Logic ---
 const moveForward = () => {
-  // In a real app, this would advance the date/time by 12 hours
-  currentPeriodIndex.value++
+  // Advance the current time by one hour
+  currentDateTime.value = new Date(currentDateTime.value.getTime() + 60 * 60 * 1000)
 }
 
 const moveBackward = () => {
-  // In a real app, this would move the date/time back by 12 hours
-  if (currentPeriodIndex.value > 0) {
-    currentPeriodIndex.value--
-  }
+  // Move the current time back by one hour
+  currentDateTime.value = new Date(currentDateTime.value.getTime() - 60 * 60 * 1000)
 }
+
+// --- Computed properties for display ---
+const currentHourAmPmForDisplay = computed(() => {
+  const date = currentDateTime.value
+  let hours = date.getHours()
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12
+  hours = hours ? hours : 12 // the hour '0' should be '12'
+  return `${hours} ${ampm}`
+})
+
+const currentDateForDisplay = computed(() =>
+  currentDateTime.value.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }),
+)
 
 // --- Keyboard Navigation ---
 const handleViewKeydown = (event: KeyboardEvent) => {
@@ -69,9 +84,10 @@ onUnmounted(() => {
 // --- Modal Handling ---
 const handleSliceClick = (slice: SliceData, sliceIndex: number) => {
   selectedSliceEvents.value = slice.originalEvents
-  // Correct identifier for 12-hour view
-  const displayHour = sliceIndex === 0 ? 12 : sliceIndex
-  selectedSliceIdentifier.value = `Hour ${displayHour}`
+  const sliceHour = sliceIndex === 0 ? 12 : sliceIndex // Hour number of the slice (1-12)
+  // Determine AM/PM for the current 12-hour period based on currentDateTime
+  const periodAmPm = currentDateTime.value.getHours() < 12 ? 'AM' : 'PM'
+  selectedSliceIdentifier.value = `Hour ${sliceHour} ${periodAmPm}`
   isModalVisible.value = true
 }
 const closeModal = () => {
@@ -83,8 +99,7 @@ const closeModal = () => {
   <div class="twelve-hour-view">
     <header class="view-header">
       <h2>12-Hour View</h2>
-      <p>Period: {{ currentPeriodIndex + 1 }}</p>
-      <!-- In a real app, this would show actual date/time range -->
+      <p>Currently: {{ currentHourAmPmForDisplay }} on {{ currentDateForDisplay }}</p>
     </header>
 
     <!-- Add event listeners to the main div to capture key presses -->
