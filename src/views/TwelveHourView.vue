@@ -193,7 +193,7 @@ const closeModal = () => {
     <svg :viewBox="`0 0 ${viewBoxSize} ${viewBoxSize}`" class="pie-chart-svg">
       <!-- Group for each slice and its dots -->
       <g
-        v-for="sliceData in slicesWithEvents"
+        v-for="(sliceData, index) in slicesWithEvents"
         :key="sliceData.id"
         class="slice-group"
         @click="handleSliceClick(sliceData, index)"
